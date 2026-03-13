@@ -13,7 +13,7 @@ const bootstrap = () => {
     res.status(200).json({ message: "welcome to onsy" });
   });
 
-  app.use("/auths", authRouter)
+  app.use("/auth", authRouter)
 
   checkConnectionDB()
 

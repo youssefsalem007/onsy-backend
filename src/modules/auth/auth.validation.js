@@ -8,9 +8,16 @@ export const signUpSchema = {
         lastName: joi.string().required(),
         email: generalRules.email.required(),
         password:generalRules.password.required(),
-        //confirmPassword: generalRules.confirmPassword.required(),
+        confirmPassword: generalRules.confirmPassword.required(),
         gender: joi.string().valid(...Object.values(genderEnum)).required(),
         age:joi.number().required()
     }).required(),
     file: generalRules.file.required()
+}
+
+export const signInSchema = {
+    body:joi.object({
+        email: generalRules.email.required(),
+        password:generalRules.password.required(),
+    }).required(),
 }
