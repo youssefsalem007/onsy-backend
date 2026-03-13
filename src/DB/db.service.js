@@ -5,3 +5,7 @@ export const findOne = async ({model, filter = {}, select ="", options={}} ={}) 
 export const create = async ({model, data} ={}) => {
     return await model.create(data)
 }
+
+export const update = async ({model, filter = {}, update = {}, options = {}} = {}) => {
+    return await model.updateOne(filter, update, options)
+}

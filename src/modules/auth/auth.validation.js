@@ -21,3 +21,10 @@ export const signInSchema = {
         password:generalRules.password.required(),
     }).required(),
 }
+
+ export const verifyOtpSchema = {
+    body: joi.object({
+        email: generalRules.email.required(),
+        otp: joi.string().length(6).required()
+    }).required()
+}

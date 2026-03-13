@@ -14,3 +14,5 @@ export const DB_URI = process.env.DB_URI;
 export const ACCESS_SECRET_KEY = process.env.ACCESS_SECRET_KEY;
 export const REFRESH_SECRET_KEY = process.env.REFRESH_SECRET_KEY;
 export const PREFIX = process.env.PREFIX;
+export const EMAIL = process.env.EMAIL;
+export const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
