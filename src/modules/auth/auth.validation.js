@@ -1,10 +1,11 @@
 import joi from "joi";
-import { generalRules } from "../../utils/security/generalRules.js";
+import { generalRules } from "../../common/utils/security/generalRules.js";
 import { genderEnum } from "../../common/enum/auth.enum.js";
 
 export const signUpSchema = {
     body:joi.object({
-        userName: joi.string().required(),
+        firstName: joi.string().required(),
+        lastName: joi.string().required(),
         email: generalRules.email.required(),
         password:generalRules.password.required(),
         confirmPassword: generalRules.confirmPassword.required(),
@@ -12,4 +13,11 @@ export const signUpSchema = {
         age:joi.number().required()
     }).required(),
     file: generalRules.file.required()
+}
+
+export const signInSchema = {
+    body:joi.object({
+        email: generalRules.email.required(),
+        password:generalRules.password.required(),
+    }).required(),
 }
