@@ -35,8 +35,8 @@ const authSchema = new mongoose.Schema({
         required:true
     },
     profilePicture:{
-        secure_url:{type:String, required:true},
-        public_id:{type:String, required:true}
+        secure_url:String,
+        public_id:String
     },
     age:{
         type: Number,

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { PORT } from "../config/config.service.js";
 import checkConnectionDB from "./DB/connectionDB.js";
+import authRouter from "./modules/auth/auth.controller.js";
 const app = express();
 const port = PORT;
 
@@ -11,6 +12,8 @@ const bootstrap = () => {
   app.get("/", (req, res, next) => {
     res.status(200).json({ message: "welcome to onsy" });
   });
+
+  app.use("/auths", authRouter)
 
   checkConnectionDB()
 
