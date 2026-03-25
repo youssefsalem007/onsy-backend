@@ -9,7 +9,6 @@ export const authentication = async (req, res, next) => {
     if(!authorization || !authorization.startsWith(PREFIX)){
         throw new Error("Unauthorized")
     }
-    
     const [prefix, token] = authorization.split(" ")
     if(prefix !== PREFIX){
         throw new Error("Invalid prefix")

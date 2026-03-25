@@ -16,5 +16,8 @@ authRouter.post(
 authRouter.post("/signin", validation(AV.signInSchema), AS.signIn);
 authRouter.post("/signout", authentication, AS.signOut);
 authRouter.post("/verify-otp", validation(AV.verifyOtpSchema), AS.verifyOtp);
+authRouter.post("/forget-password", validation(AV.forgetPasswordSchema), AS.forgetPassword);
+authRouter.post("/verify-forget-password-otp", validation(AV.verifyForgetPasswordOtpSchema), AS.verifyForgetPasswordOtp);
+authRouter.post("/reset-password", validation(AV.resetPasswordSchema), AS.resetPassword);
 
 export default authRouter;

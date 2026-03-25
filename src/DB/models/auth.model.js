@@ -51,9 +51,14 @@ const authSchema = new mongoose.Schema(
       code: { type: String },
       expiresAt: { type: Date },
     },
+    isOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     strictQuery: true,
+    timestamps: true,
   },
 );
 

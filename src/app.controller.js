@@ -3,6 +3,7 @@ import cors from "cors";
 import { PORT } from "../config/config.service.js";
 import checkConnectionDB from "./DB/connectionDB.js";
 import authRouter from "./modules/auth/auth.controller.js";
+import userRouter from "./modules/user/user.controller.js";
 const app = express();
 const port = PORT;
 
@@ -14,6 +15,7 @@ const bootstrap = () => {
   });
 
   app.use("/auth", authRouter)
+  app.use("/user", userRouter)
 
   checkConnectionDB()
 

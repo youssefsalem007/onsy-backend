@@ -11,14 +11,14 @@ import {
   REFRESH_SECRET_KEY,
 } from "../../../config/config.service.js";
 import { randomUUID } from "node:crypto";
-import { sendEmail } from "../../common/utils/email.srevice.js";
+import { sendEmail } from "../../common/utils/email.service.js";
 
 export const signUp = async (req, res, next) => {
   const { firstName, lastName, email, password, confirmPassword, gender, age } =
     req.body;
 
   if (password !== confirmPassword) {
-    throw new Error("Password not match", { cause: 400 });
+    return next(new Error("Password not match", { cause: 400 }));
   }
   if (
     await db_service.findOne({
@@ -26,7 +26,7 @@ export const signUp = async (req, res, next) => {
       filter: { email },
     })
   ) {
-    throw new Error("Email already exists", { cause: 400 });
+    return next(new Error("Email already exists", { cause: 400 }));
   }
 
   const { secure_url, public_id } = await cloudinary.uploader.upload(
@@ -47,7 +47,10 @@ export const signUp = async (req, res, next) => {
       age,
       profilePicture: { secure_url, public_id },
       isVerified: false,
-      otp: { code: otpCode, expiresAt: otpExpiry },
+      otp: {
+        code: Hash({ plain_text: otpCode, salt_rounds: SALT_ROUNDS }),
+        expiresAt: otpExpiry,
+      },
     },
   });
 
@@ -85,13 +88,12 @@ export const verifyOtp = async (req, res, next) => {
     if (auth.isVerified) {
       return next(new Error("Account already verified", { cause: 400 }));
     }
-
-    if (auth.otp.code !== otp) {
-      return next(new Error("Invalid OTP", { cause: 400 }));
-    }
-
     if (auth.otp.expiresAt < new Date()) {
       return next(new Error("OTP expired", { cause: 400 }));
+    }
+
+    if (!Compare({ plain_text: otp, cipher_text: auth.otp.code })) {
+      return next(new Error("Invalid OTP", { cause: 400 }));
     }
 
     await db_service.update({
@@ -118,7 +120,7 @@ export const signIn = async (req, res, next) => {
     filter: { email },
   });
   if (!auth) {
-    throw new Error("Email not found", { cause: 400 });
+    return next(new Error("Email not found", { cause: 400 }));
   }
 
   if (!auth.isVerified) {
@@ -126,7 +128,7 @@ export const signIn = async (req, res, next) => {
   }
 
   if (!Compare({ plain_text: password, cipher_text: auth.password })) {
-    throw new Error("Password not match", { cause: 400 });
+    return next(new Error("Password not match", { cause: 400 }));
   }
 
   const jwtid = randomUUID();
@@ -165,4 +167,103 @@ export const signOut = async (req, res, next) => {
     status: 200,
     message: "Successful signOut",
   });
+};
+
+export const forgetPassword = async (req, res, next) => {
+  const { email } = req.body;
+
+  const auth = await db_service.findOne({
+    model: authModel,
+    filter: { email },
+  });
+  if (!auth) {
+    return next(new Error("Email not found", { cause: 404 }));
+  }
+
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+  await db_service.update({
+    model: authModel,
+    filter: { email },
+    update: {
+      otp: {
+        code: Hash({ plain_text: otpCode, salt_rounds: SALT_ROUNDS }),
+        expiresAt: otpExpiry,
+      },
+      isOtpVerified: false,
+    },
+  });
+
+  await sendEmail({
+    to: email,
+    subject: "Reset your Onsy password",
+    html: `
+      <h2>Hello ${auth.firstName}!</h2>
+      <p>Your password reset code is:</p>
+      <h1 style="color: #4F46E5;">${otpCode}</h1>
+      <p>This code expires in <strong>10 minutes</strong>.</p>
+    `,
+  });
+
+  successResponse({ res, status: 200, message: "OTP sent to your email" });
+};
+
+export const verifyForgetPasswordOtp = async (req, res, next) => {
+  const { email, otp } = req.body;
+
+  const auth = await db_service.findOne({
+    model: authModel,
+    filter: { email },
+  });
+  if (!auth) {
+    return next(new Error("Email not found", { cause: 404 }));
+  }
+
+  if (auth.otp.expiresAt < new Date()) {
+    return next(new Error("OTP expired", { cause: 400 }));
+  }
+
+  if (!Compare({ plain_text: otp, cipher_text: auth.otp.code })) {
+    return next(new Error("Invalid OTP", { cause: 400 }));
+  }
+
+  await db_service.update({
+    model: authModel,
+    filter: { email },
+    update: { isOtpVerified: true, otp: null },
+  });
+
+  successResponse({ res, status: 200, message: "OTP verified successfully" });
+};
+
+export const resetPassword = async (req, res, next) => {
+  const { email, password, confirmPassword } = req.body;
+
+  if (password !== confirmPassword) {
+    return next(new Error("Passwords do not match", { cause: 400 }));
+  }
+
+  const auth = await db_service.findOne({
+    model: authModel,
+    filter: { email },
+  });
+  if (!auth) {
+    return next(new Error("Email not found", { cause: 404 }));
+  }
+
+  if (!auth.isOtpVerified) {
+    return next(new Error("Please verify OTP first", { cause: 403 }));
+  }
+
+  await db_service.update({
+    model: authModel,
+    filter: { email },
+    update: {
+      password: Hash({ plain_text: password, salt_rounds: SALT_ROUNDS }),
+      isOtpVerified: false,
+    },
+  });
+
+  successResponse({ res, status: 200, message: "Password reset successfully" });
 };
