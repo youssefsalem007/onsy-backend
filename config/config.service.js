@@ -16,3 +16,5 @@ export const REFRESH_SECRET_KEY = process.env.REFRESH_SECRET_KEY;
 export const PREFIX = process.env.PREFIX;
 export const EMAIL = process.env.EMAIL;
 export const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+export const REDIS_URL = process.env.REDIS_URL;

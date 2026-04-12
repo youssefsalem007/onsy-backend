@@ -10,9 +10,8 @@ export const signUpSchema = {
         password:generalRules.password.required(),
         confirmPassword: generalRules.confirmPassword.required(),
         gender: joi.string().valid(...Object.values(genderEnum)).required(),
-        age:joi.number().required()
+        age:joi.number().min(1).max(100).required()
     }).required(),
-    file: generalRules.file.required()
 }
 
 export const signInSchema = {
@@ -25,6 +24,28 @@ export const signInSchema = {
  export const verifyOtpSchema = {
     body: joi.object({
         email: generalRules.email.required(),
-        otp: joi.string().length(6).required()
+        otp: joi.string().length(4).required()
+    }).required()
+}
+
+export const forgetPasswordSchema = {
+    body: joi.object({
+        email: generalRules.email.required(),
+    }).required()
+}
+
+export const verifyForgetPasswordOtpSchema = {
+    body: joi.object({
+        email: generalRules.email.required(),
+        otp: joi.string().length(4).required()
+    }).required()
+}
+
+export const resetPasswordSchema = {
+    body: joi.object({
+        email: generalRules.email.required(),
+        otp: joi.string().length(4).required(),
+        password: generalRules.password.required(),
+        confirmPassword: generalRules.confirmPassword.required()
     }).required()
 }

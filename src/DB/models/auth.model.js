@@ -35,10 +35,6 @@ const authSchema = new mongoose.Schema(
       enum: Object.values(genderEnum),
       required: true,
     },
-    profilePicture: {
-      secure_url: String,
-      public_id: String,
-    },
     age: {
       type: Number,
       required: true,
@@ -47,13 +43,19 @@ const authSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    otp: {
+    /*otp: {
       code: { type: String },
       expiresAt: { type: Date },
     },
+    isOtpVerified: {
+      type: Boolean,
+      default: false,
+    }*/
+    changeCredential:Date
   },
   {
     strictQuery: true,
+    timestamps: true,
   },
 );
 

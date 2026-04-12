@@ -1,7 +1,6 @@
 import * as db_service from "../../DB/db.service.js";
 import authModel from "../../DB/models/auth.model.js";
 import blacklistTokenModel from "../../DB/models/blacklistToken.model.js";
-import cloudinary from "../../common/utils/cloudinary.js";
 import successResponse from "../../common/utils/response.success.js";
 import { GenerateToken } from "../../common/utils/token.service.js";
 import { Hash, Compare } from "../../common/utils/security/hash.security.js";
@@ -9,32 +8,30 @@ import {
   SALT_ROUNDS,
   ACCESS_SECRET_KEY,
   REFRESH_SECRET_KEY,
+  GOOGLE_CLIENT_ID,
 } from "../../../config/config.service.js";
 import { randomUUID } from "node:crypto";
-import { sendEmail } from "../../common/utils/email.srevice.js";
+import { sendEmailOtp } from "../../common/utils/email/email.service.js";
+import {OAuth2Client} from 'google-auth-library'
+import { providerEnum } from "../../common/enum/auth.enum.js";
+import { deleteKey, get, otp_key, revoked_key, setValue } from "../../DB/redis/redis.service.js";
+import { emailEnum } from "../../common/enum/email.enum.js";
 
 export const signUp = async (req, res, next) => {
-  const { firstName, lastName, email, password, confirmPassword, gender, age } =
-    req.body;
+  const { firstName, lastName, email, password, confirmPassword, gender, age } = req.body;
 
   if (password !== confirmPassword) {
-    throw new Error("Password not match", { cause: 400 });
+    return next(new Error("Password not match", { cause: 400 }));
   }
+
   if (
     await db_service.findOne({
       model: authModel,
       filter: { email },
     })
   ) {
-    throw new Error("Email already exists", { cause: 400 });
+    return next(new Error("Email already exists", { cause: 400 }));
   }
-
-  const { secure_url, public_id } = await cloudinary.uploader.upload(
-    req.file.path,
-  );
-
-  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
   const auth = await db_service.create({
     model: authModel,
@@ -45,22 +42,14 @@ export const signUp = async (req, res, next) => {
       password: Hash({ plain_text: password, salt_rounds: SALT_ROUNDS }),
       gender,
       age,
-      profilePicture: { secure_url, public_id },
-      isVerified: false,
-      otp: { code: otpCode, expiresAt: otpExpiry },
+      isVerified: false
     },
   });
 
-  await sendEmail({
-    to: email,
-    subject: "Verify your Onsy account",
-    html: `
-        <h2>Welcome to Onsy, ${firstName}!</h2>
-        <p>Your verification code is:</p> 
-        <h1 style="color: #4F46E5;">${otpCode}</h1>
-        <p>This code expires in <strong>10 minutes</strong>.</p>
-      `,
-  });
+  await sendEmailOtp({
+    email: auth.email,
+    subject: emailEnum.confirmEmail
+  })
 
   successResponse({
     res,
@@ -70,45 +59,94 @@ export const signUp = async (req, res, next) => {
   });
 };
 
+export const googleSignUp = async (req,res,next) => {
+  const {idToken} = req.body
+  const client = new OAuth2Client();
+
+  const ticket = await client.verifyIdToken({
+      idToken,
+      audience: GOOGLE_CLIENT_ID,
+  });
+  const payload = ticket.getPayload()
+
+  const {email, email_verified, name} = payload
+
+  let auth = await db_service.findOne({model: authModel, filter:{ email }})
+
+  if(!auth){
+    auth = await db_service.create({
+      model: authModel,
+      data:{
+        email,
+        isVerified:email_verified,
+        fullName:name,
+        provider: providerEnum.google
+      }
+    })
+  }
+
+  if(auth.provider == providerEnum.system){
+    throw new Error ("log in using system", {cause:400})
+  }
+
+  const jwtid = randomUUID();
+  const access_token = GenerateToken({
+    payload: { id: auth._id, email: auth.email },
+    secret_key: ACCESS_SECRET_KEY,
+    options: { expiresIn: "1h", jwtid },
+  })
+
+  successResponse({res, message: "success signIn", data:{access_token}})
+}
+
 export const verifyOtp = async (req, res, next) => {
-  try {
     const { email, otp } = req.body;
 
-    const auth = await db_service.findOne({
+    const otpValue = await get(otp_key({email, subject: emailEnum.confirmEmail}))
+
+    if(!otpValue){
+      throw new Error("otp expired")
+    }
+    
+    if(!Compare({plain_text:otp, cipher_text: otpValue})){
+      throw new Error("invalid otp")
+    }
+
+    const auth = await db_service.update({
       model: authModel,
-      filter: { email },
+      filter: { email, isVerified: false, provider: providerEnum.system },
+      update: { isVerified: true}
     });
-    if (!auth) {
-      return next(new Error("Email not found", { cause: 404 }));
+
+    if(!auth){
+      throw new Error("user not found or already confirmed")
     }
 
-    if (auth.isVerified) {
-      return next(new Error("Account already verified", { cause: 400 }));
-    }
-
-    if (auth.otp.code !== otp) {
-      return next(new Error("Invalid OTP", { cause: 400 }));
-    }
-
-    if (auth.otp.expiresAt < new Date()) {
-      return next(new Error("OTP expired", { cause: 400 }));
-    }
-
-    await db_service.update({
-      model: authModel,
-      filter: { email },
-      update: { isVerified: true, otp: null },
-    });
+    await deleteKey(otp_key({email, subject: emailEnum.confirmEmail}))
 
     successResponse({
       res,
       status: 200,
       message: "Account verified successfully!",
-    });
-  } catch (error) {
-    next(error);
-  }
+    })
 };
+
+export const resendOtp = async (req,res,next) => {
+  const {email} = req.body
+
+  const auth = await db_service.findOne({
+    model: authModel,
+    filter: {email, isVerified: false, provider: providerEnum.system}
+  })
+
+  if(!auth){
+    throw new Error("user not found or already confirmed")
+  }
+
+  await sendEmailOtp({email, subject: emailEnum.confirmEmail})
+
+  successResponse({res, message:"otp sent successfully"})
+}
 
 export const signIn = async (req, res, next) => {
   const { email, password } = req.body;
@@ -118,7 +156,7 @@ export const signIn = async (req, res, next) => {
     filter: { email },
   });
   if (!auth) {
-    throw new Error("Email not found", { cause: 400 });
+    return next(new Error("Email not found", { cause: 400 }));
   }
 
   if (!auth.isVerified) {
@@ -126,7 +164,7 @@ export const signIn = async (req, res, next) => {
   }
 
   if (!Compare({ plain_text: password, cipher_text: auth.password })) {
-    throw new Error("Password not match", { cause: 400 });
+    return next(new Error("Password not match", { cause: 400 }));
   }
 
   const jwtid = randomUUID();
@@ -151,18 +189,84 @@ export const signIn = async (req, res, next) => {
 };
 
 export const signOut = async (req, res, next) => {
-  const token = req.headers.authorization.split(" ")[1];
-
-  await db_service.create({
-    model: blacklistTokenModel,
-    data: {
-      token,
-    },
-  });
+  
+    setValue({
+      key:revoked_key(req.auth._id, req.decoded.jti),
+      value:`${req.decoded.jti}`,
+      ttl: req.decoded.exp - Math.floor(Date.now() / 1000)
+    })
 
   successResponse({
     res,
     status: 200,
     message: "Successful signOut",
   });
+};
+
+export const forgetPassword = async (req, res, next) => {
+  const { email } = req.body;
+
+  const auth = await db_service.findOne({
+    model: authModel,
+    filter: { email, isVerified: true, provider:providerEnum.system },
+  })
+
+  if (!auth) {
+    throw new Error("Email not found", { cause: 404 })
+  }
+
+  await sendEmailOtp({email, subject: emailEnum.forgetPassword})
+
+  successResponse({ res, status: 200, message: "OTP sent to your email" });
+};
+
+export const verifyForgetPasswordOtp = async (req, res, next) => {
+  const { email, otp } = req.body;
+
+  const otpValue = await get(otp_key({email, subject:emailEnum.forgetPassword}))
+  if(!otpValue){
+    throw new Error("otp expired")
+  }
+
+  if(!Compare({plain_text:otp, cipher_text: otpValue})){
+    throw new Error("invalid otp")
+  }
+
+  await deleteKey(otp_key({email, subject: emailEnum.forgetPassword}))
+  await setValue({
+    key:otp_key({email, subject: emailEnum.resetPassword}),
+    value: 1,
+    ttl: 60 * 10
+  })
+  successResponse({ res, status: 200, message: "OTP verified successfully" });
+};
+
+export const resetPassword = async (req, res, next) => {
+  const { email, password, confirmPassword } = req.body;
+
+  if (password !== confirmPassword) {
+    throw new Error("Passwords do not match", { cause: 400 });
+  }
+
+  const otpVerified = await get(otp_key({email, subject: emailEnum.resetPassword}))
+  if(!otpVerified){
+    throw new Error ("verify your email first")
+  }
+
+  const auth = await db_service.update({
+    model: authModel,
+    filter: { email, provider: providerEnum.system, isVerified: true },
+    update: {
+      password: Hash({plain_text: password, salt_rounds: SALT_ROUNDS}),
+      changeCredential: new Date()
+    }
+  });
+
+  if (!auth) {
+    return next(new Error("Email not found", { cause: 404 }));
+  }
+
+  await deleteKey(otp_key({email, subject: emailEnum.resetPassword}))
+
+  successResponse({ res, status: 200, message: "Password reset successfully" });
 };
