@@ -9,7 +9,7 @@ const app = express();
 const port = PORT;
 
 const bootstrap = () => {
-  app.use(cors(), express.json());
+  app.use(cors({origin:"*"}), express.json());
 
   app.get("/", (req, res, next) => {
     res.status(200).json({ message: "welcome to onsy" });
