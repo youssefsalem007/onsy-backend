@@ -8,7 +8,6 @@ import { SALT_ROUNDS } from "../../../config/config.service.js"
 
 export const getProfile = async (req, res, next) => {
     const {_id} = req.auth
-     console.log("_id:", _id) 
     const user = await db_service.findOne({
         model: authModel,
         filter: { _id },
