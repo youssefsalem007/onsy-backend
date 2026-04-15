@@ -24,7 +24,7 @@ export const signInSchema = {
  export const verifyOtpSchema = {
     body: joi.object({
         email: generalRules.email.required(),
-        otp: joi.string().length(4).required()
+        otp: joi.number().min(1000).max(9999).required()
     }).required()
 }
 
@@ -37,14 +37,14 @@ export const forgetPasswordSchema = {
 export const verifyForgetPasswordOtpSchema = {
     body: joi.object({
         email: generalRules.email.required(),
-        otp: joi.string().length(4).required()
+        otp: joi.number().min(1000).max(9999).required()
     }).required()
 }
 
 export const resetPasswordSchema = {
     body: joi.object({
         email: generalRules.email.required(),
-        otp: joi.string().length(4).required(),
+        otp: joi.number().min(1000).max(9999).required(),
         password: generalRules.password.required(),
         confirmPassword: generalRules.confirmPassword.required()
     }).required()

@@ -43,7 +43,7 @@ export const sendEmailOtp = async({email, subject} = {}) => {
         throw new Error("you have exceeded the number of tries, try again later")
     }
 
-    const otp = crypto.randomInt(1000, 10000).toString()
+    const otp = crypto.randomInt(1000, 10000)
     eventEmitter.emit(emailEnum.confirmEmail, async() => {
         await sendEmail({
             to:email,
@@ -52,6 +52,6 @@ export const sendEmailOtp = async({email, subject} = {}) => {
         })
     })
 
-    await setValue({key: otp_key({email, subject}), value: otp, ttl: 60*5})
+    await setValue({key: otp_key({email, subject}), value: Hash({plain_text:`${otp}`}), ttl: 60*5})
     await incr(max_otp_key({email}))
 }
