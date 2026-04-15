@@ -107,16 +107,18 @@ export const googleSignUp = async (req, res, next) => {
 export const verifyOtp = async (req, res, next) => {
   const { email, otp } = req.body;
 
+  const cleanOtp = String(otp).trim();
+
   const otpValue = await get(
     otp_key({ email, subject: emailEnum.confirmEmail }),
   );
 
   if (!otpValue) {
-    throw new Error("otp expired");
+    throw new Error("otp expired");  
   }
 
-  if (!Compare({ plain_text: otp, cipher_text: otpValue })) {
-    throw new Error("invalid otp");
+  if (!Compare({ plain_text: cleanOtp, cipher_text: otpValue })) {
+    throw new Error("invalid otp"); 
   }
 
   const auth = await db_service.update({
@@ -229,6 +231,8 @@ export const forgetPassword = async (req, res, next) => {
 export const verifyForgetPasswordOtp = async (req, res, next) => {
   const { email, otp } = req.body;
 
+  const cleanOtp = String(otp).trim();
+
   const otpValue = await get(
     otp_key({ email, subject: emailEnum.forgetPassword }),
   );
@@ -236,7 +240,7 @@ export const verifyForgetPasswordOtp = async (req, res, next) => {
     throw new Error("otp expired");
   }
 
-  if (!Compare({ plain_text: otp, cipher_text: otpValue })) {
+  if (!Compare({ plain_text: cleanOtp, cipher_text: otpValue })) {
     throw new Error("invalid otp");
   }
 
