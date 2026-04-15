@@ -52,6 +52,6 @@ export const sendEmailOtp = async({email, subject} = {}) => {
         })
     })
 
-    await setValue({key: otp_key({email, subject}), value: Hash({plain_text:`${otp}`}), ttl: 60*5})
+    await setValue({key: otp_key({email, subject}), value: otp, ttl: 60*5})
     await incr(max_otp_key({email}))
 }
