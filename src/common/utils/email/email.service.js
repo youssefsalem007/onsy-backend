@@ -1,15 +1,16 @@
 import nodemailer from "nodemailer"
 
 import { EMAIL, EMAIL_PASSWORD } from "../../../../config/config.service.js"
-import { emailEnum } from "../../enum/email.enum.js"
+import { emailEnum } from "../../enum/email.enum.js" 
 import { block_otp_key, get, incr, max_otp_key, otp_key, setValue, ttl } from "../../../DB/redis/redis.service.js"
 import crypto from "node:crypto"
 import { emailTemp } from "./email.template.js"
 import { Hash } from "../security/hash.security.js"
-import { eventEmitter } from "./email.events.js"
+
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
+    pool: true,
     auth: {
         user: EMAIL,
         pass: EMAIL_PASSWORD
@@ -29,7 +30,7 @@ export const sendEmail = async ({ to, subject, html }) => {
 export const sendEmailOtp = async({email, subject} = {}) => {
     const blocked = await ttl(block_otp_key({email}))
     if(blocked > 0){
-        throw new Error(`you are blocked try again after ${blocked} seconds`)
+        throw new Error(`you are blocked try again after ${blocked} seconds`) 
     }
 
     const otpTtl = await ttl(otp_key({email, subject}))
@@ -44,13 +45,13 @@ export const sendEmailOtp = async({email, subject} = {}) => {
     }
 
     const otp = crypto.randomInt(1000, 10000)
-    eventEmitter.emit(emailEnum.confirmEmail, async() => {
+    
         await sendEmail({
             to:email,
             subject:"welcome to onsy",
             html:emailTemp(otp)
         })
-    })
+    
 
     await setValue({key: otp_key({email, subject}), value: Hash({plain_text:`${otp}`}), ttl: 60*5})
     await incr(max_otp_key({email}))
