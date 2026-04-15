@@ -23,8 +23,7 @@ import {
 import { emailEnum } from "../../common/enum/email.enum.js";
 
 export const signUp = async (req, res, next) => {
-  const { firstName, lastName, email, password, confirmPassword, gender, age } =
-    req.body;
+  const { firstName, lastName, email, password, confirmPassword, gender, age } =req.body;
 
   if (password !== confirmPassword) {
     return next(new Error("Password not match", { cause: 400 }));
