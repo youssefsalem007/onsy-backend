@@ -8,7 +8,7 @@ import { connectionRedis } from "./DB/redis/redis.connection.js";
 const app = express();
 const port = PORT;
 
-const bootstrap = () => {
+const bootstrap = async () => {
   app.use(cors({origin:"*"}), express.json());
 
   app.get("/", (req, res, next) => {
@@ -18,8 +18,8 @@ const bootstrap = () => {
   app.use("/auth", authRouter)
   app.use("/user", userRouter)
 
-  checkConnectionDB()
-  connectionRedis()
+  await checkConnectionDB()
+  await connectionRedis()
 
   app.use("/*demo", (req, res, next) => {
     throw new Error(`invalid url ${req.originalUrl}`, { cause: 404 });

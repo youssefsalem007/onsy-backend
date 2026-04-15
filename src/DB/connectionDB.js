@@ -5,6 +5,7 @@ const checkConnectionDB = async () => {
   await mongoose
     .connect(DB_URI, {
       serverSelectionTimeoutMS: 5000,
+      bufferCommands: false,
     })
     .then(() => {
       console.log("db connected");
