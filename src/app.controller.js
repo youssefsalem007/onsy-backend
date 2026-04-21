@@ -5,6 +5,7 @@ import checkConnectionDB from "./DB/connectionDB.js";
 import authRouter from "./modules/auth/auth.controller.js";
 import userRouter from "./modules/user/user.controller.js";
 import {connectRedis} from "./DB/redis/redis.connection.js";
+import moodRouter from "./modules/mood/mood.controller.js";
 const app = express();
 const port = PORT;
 
@@ -17,6 +18,7 @@ const bootstrap = async () => {
 
   app.use("/auth", authRouter)
   app.use("/user", userRouter)
+  app.use("/mood", moodRouter)
 
   await checkConnectionDB()
   await connectRedis() 

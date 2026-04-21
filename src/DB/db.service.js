@@ -23,3 +23,7 @@ export const findById = async ({model, id, select = {}} = {}) => {
 export const findOneAndDelete = async ({model, filter = {}, options = {}} = {}) => {
     return await model.findOneAndDelete(filter, options)
 }
+
+export const find = async ({model, filter = {}, options = {}} = {}) => {
+    return await model.find(filter, options)
+}
