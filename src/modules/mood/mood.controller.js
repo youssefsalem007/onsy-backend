@@ -6,10 +6,12 @@ import { validation } from "../../common/middleware/validation.js";
 const moodRouter = Router()
 
 
-moodRouter.post("/", authentication, validation(MV.logMoodSchema), MS.moodLog)
-moodRouter.get("/all", authentication, MS.allMoods)
-moodRouter.get("/:moodId", authentication, validation(MV.getMoodSchema), MS.allMoods)
+moodRouter.post("/create-mood", authentication, validation(MV.logMoodSchema), MS.moodLog)
+moodRouter.get("/all-moods", authentication, MS.allMoods)
+moodRouter.get("/:moodId", authentication, validation(MV.getMoodSchema), MS.getMoodById)
 moodRouter.patch("/:moodId", authentication, validation(MV.updateMoodSchema), MS.updateMood)
+moodRouter.delete("/:moodId", authentication, validation(MV.deleteMoodSchema), MS.deleteMood)
+// moodRouter.get("/avg-mood/:userId", authentication, validation(MV.getAvgMoodSchema), MS.getAvgMood) 
 
 
 
